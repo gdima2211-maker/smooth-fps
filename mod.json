@@ -1,0 +1,37 @@
+{
+	"geode": "5.10.1",
+	"gd": {
+		"win": "2.2081"
+	},
+	"version": "v1.0.0",
+	"id": "yourname.smooth-fps",
+	"name": "Smooth FPS",
+	"developer": "yourname",
+	"description": "Ползунок частоты кадров (24-1440) и сглаживание картинки между тиками физики. Физика игры не меняется.",
+	"tags": [
+		"performance",
+		"enhancement",
+		"visual"
+	],
+	"settings": {
+		"fps": {
+			"type": "int",
+			"name": "FPS",
+			"description": "Частота кадров отрисовки. Физика остаётся на своих тиках. Для значений выше частоты монитора отключи VSync в настройках видео GD.",
+			"default": 240,
+			"min": 24,
+			"max": 1440,
+			"control": {
+				"arrows": true,
+				"slider": true,
+				"input": true
+			}
+		},
+		"interpolation": {
+			"type": "bool",
+			"name": "Сглаживание (интерполяция)",
+			"description": "Рисует игрока и камеру в промежуточных позициях между тиками физики. Только визуал, реальные позиции не меняются.",
+			"default": true
+		}
+	}
+}
