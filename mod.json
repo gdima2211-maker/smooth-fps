@@ -3,21 +3,20 @@
 	"gd": {
 		"win": "2.2081"
 	},
-	"version": "v1.0.0",
+	"version": "v1.1.0",
 	"id": "yourname.smooth-fps",
 	"name": "Smooth FPS",
-	"developer": "CaffOrKeff",
-	"description": "Ползунок частоты кадров (24-1440) и сглаживание картинки между тиками физики. Физика игры не меняется.",
+	"developer": "yourname",
+	"description": "Custom FPS slider (24-1440) with frame extrapolation for smooth motion above the physics rate. Physics is never changed.",
 	"tags": [
 		"performance",
-		"enhancement",
-		"visual"
+		"enhancement"
 	],
 	"settings": {
 		"fps": {
 			"type": "int",
 			"name": "FPS",
-			"description": "Частота кадров отрисовки. Физика остаётся на своих тиках. Для значений выше частоты монитора отключи VSync в настройках видео GD.",
+			"description": "Rendering frame rate. Physics keeps its own fixed ticks. For values above your monitor's refresh rate, turn off VSync in GD's video settings.",
 			"default": 240,
 			"min": 24,
 			"max": 1440,
@@ -27,11 +26,21 @@
 				"input": true
 			}
 		},
-		"interpolation": {
+		"smoothing": {
 			"type": "bool",
-			"name": "Сглаживание (интерполяция)",
-			"description": "Рисует игрока и камеру в промежуточных позициях между тиками физики. Только визуал, реальные позиции не меняются.",
+			"name": "Frame smoothing",
+			"description": "Draws the players and the camera between physics ticks so motion stays smooth at high FPS. Visual only, real positions never change.",
 			"default": true
+		},
+		"mode": {
+			"type": "string",
+			"name": "Smoothing mode",
+			"description": "<cy>Extrapolation</c> predicts where the player is right now (no added delay). <cy>Interpolation</c> blends between the last two ticks (up to one tick behind, never overshoots).",
+			"default": "Extrapolation",
+			"one-of": [
+				"Extrapolation",
+				"Interpolation"
+			]
 		}
 	}
 }

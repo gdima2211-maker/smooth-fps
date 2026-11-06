@@ -1,23 +1,31 @@
 # Smooth FPS (Geode)
 
-Ползунок FPS (24-1440) и сглаживание картинки между тиками физики.
-Физика, хитбоксы и ввод не меняются, мод только визуальный.
+FPS slider (24-1440) plus frame extrapolation for Geometry Dash.
+Physics, hitboxes and input are not changed, the mod is visual only.
 
-## Как собрать через GitHub
+## Features
 
-1. Создай новый репозиторий на GitHub и загрузи в него содержимое этой папки.
-2. В `mod.json` поменяй `id` (`твойник.smooth-fps`) и `developer`.
-3. Открой вкладку **Actions**. Сборка запустится сама после push, либо запусти вручную (Run workflow).
-4. Когда сборка закончится, скачай артефакт **Build Output**, внутри будет файл `.geode`.
-5. Положи `.geode` в папку `geode/mods` внутри папки с игрой (или перетащи в окно GD с установленным Geode).
+- **FPS slider** from 24 to 1440.
+- **Extrapolation mode**: draws the player and camera where they are predicted to be *right now*, so there is no added delay.
+- **Interpolation mode**: blends between the last two physics ticks. Up to one tick behind (about 4 ms), but never overshoots.
+- Smoothing is applied only while the frame is drawn. Collisions, triggers and progress always use the real positions.
+- Works with time warp, dual mode and teleport portals. Large jumps are never smoothed.
 
-## Если сборка падает
+## Building with GitHub
 
-- Ошибка про версию Geode: поменяй `"geode"` в `mod.json` на актуальную версию Geode.
-- Ошибка про `setAnimationInterval` или поля `m_player1` / `m_objectLayer` / `m_isDead`: напиши, поправим под биндинги твоей версии.
+1. Create a new GitHub repository and upload the contents of this folder.
+2. In `mod.json`, change `id` (`yourname.smooth-fps`) and `developer`.
+3. Open the **Actions** tab. The build starts after a push, or run it manually (Run workflow).
+4. When it finishes, download the **Build Output** artifact. It contains the `.geode` file.
+5. Put the `.geode` file into `geode/mods` in your game folder (or drag it onto the GD window).
 
-## Важно
+## If the build fails
 
-- Отключи VSync в настройках видео GD, иначе FPS упрётся в частоту монитора.
-- Сглаживание добавляет задержку не больше одного тика физики (около 4 мс при 240 TPS).
-- Мод не проверялся на реальной игре, первый запуск лучше сделать в обычном уровне без рекордов.
+- Geode version error: change `"geode"` in `mod.json` to the current Geode version.
+- Errors about `setAnimationInterval`, `m_player1`, `m_objectLayer`, `m_gameState` or `m_isDead`: send the log, the field names may differ in your bindings version.
+
+## Notes
+
+- Turn off VSync in GD's video settings, otherwise FPS is capped by your monitor.
+- Extrapolation does not predict through a bounce (jump / landing), so the icon never sinks into the floor.
+- Not tested in-game yet. Try it in a normal level first, not on a record attempt.
