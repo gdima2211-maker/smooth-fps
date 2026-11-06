@@ -6,7 +6,7 @@
 	"version": "v1.0.0",
 	"id": "yourname.smooth-fps",
 	"name": "Smooth FPS",
-	"developer": "yourname",
+	"developer": "CaffOrKeff",
 	"description": "Ползунок частоты кадров (24-1440) и сглаживание картинки между тиками физики. Физика игры не меняется.",
 	"tags": [
 		"performance",
