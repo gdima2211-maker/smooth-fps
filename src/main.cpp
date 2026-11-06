@@ -16,6 +16,7 @@ using namespace geode::prelude;
 static std::atomic<int>  g_fps{240};
 static std::atomic<bool> g_smoothing{true};
 static std::atomic<bool> g_extrapolate{true};
+static std::atomic<bool> g_smoothTrail{true};
 
 static void applyFPS() {
 	CCDirector::get()->setAnimationInterval(1.0 / g_fps.load());
@@ -26,6 +27,7 @@ static void loadSettings() {
 	g_fps = std::clamp<int>(static_cast<int>(mod->getSettingValue<int64_t>("fps")), 24, 1440);
 	g_smoothing = mod->getSettingValue<bool>("smoothing");
 	g_extrapolate = mod->getSettingValue<std::string>("mode") == "Extrapolation";
+	g_smoothTrail = mod->getSettingValue<bool>("smooth-wave-trail");
 }
 
 $on_mod(Loaded) {
@@ -37,6 +39,7 @@ $on_mod(Loaded) {
 	});
 	listenForSettingChanges<bool>("smoothing", [](bool) { loadSettings(); });
 	listenForSettingChanges<std::string>("mode", [](std::string) { loadSettings(); });
+	listenForSettingChanges<bool>("smooth-wave-trail", [](bool) { loadSettings(); });
 }
 
 // ---------------------------------------------------------------------------
@@ -164,8 +167,12 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 		f->phase = 0.0;
 	}
 
-	static bool streakUsable(HardStreak* t) {
-		return t && t->isVisible() && t->m_pointArray && t->m_pointArray->count() > 0;
+	static bool streakUsable(HardStreak* t, CCPoint const& delta) {
+		if (!g_smoothTrail.load() || !t || !t->isVisible()) return false;
+		if (!t->m_pointArray || t->m_pointArray->count() == 0) return false;
+		if (!std::isfinite(delta.x) || !std::isfinite(delta.y)) return false;
+		float len = ccpLength(delta);
+		return len > 0.f && len < 20.f; // sane sub-step offset only
 	}
 
 	void update(float dt) {
@@ -244,7 +251,7 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 		m_objectLayer->setPosition(f->cam.sample(alpha, extra));
 
 		f->trail1 = nullptr;
-		if (streakUsable(m_player1->m_waveTrail)) {
+		if (streakUsable(m_player1->m_waveTrail, ccpSub(s1, f->real1))) {
 			f->trail1 = m_player1->m_waveTrail;
 			f->head1 = f->trail1->m_currentPoint;
 			f->trail1->m_currentPoint = ccpAdd(f->head1, ccpSub(s1, f->real1));
@@ -260,7 +267,7 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 			m_player2->setPosition(s2);
 			f->appliedP2 = true;
 
-			if (streakUsable(m_player2->m_waveTrail)) {
+			if (streakUsable(m_player2->m_waveTrail, ccpSub(s2, f->real2))) {
 				f->trail2 = m_player2->m_waveTrail;
 				f->head2 = f->trail2->m_currentPoint;
 				f->trail2->m_currentPoint = ccpAdd(f->head2, ccpSub(s2, f->real2));

@@ -3,7 +3,7 @@
 	"gd": {
 		"win": "2.2081"
 	},
-	"version": "v1.1.0",
+	"version": "v1.1.2",
 	"id": "yourname.smooth-fps",
 	"name": "Smooth FPS",
 	"developer": "yourname",
@@ -30,6 +30,12 @@
 			"type": "bool",
 			"name": "Frame smoothing",
 			"description": "Draws the players and the camera between physics ticks so motion stays smooth at high FPS. Visual only, real positions never change.",
+			"default": true
+		},
+		"smooth-wave-trail": {
+			"type": "bool",
+			"name": "Smooth wave trail",
+			"description": "Also smooths the head of the wave trail. Turn this off if you get crashes or glitches while playing the wave.",
 			"default": true
 		},
 		"mode": {
