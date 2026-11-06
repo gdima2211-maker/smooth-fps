@@ -248,7 +248,7 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 			f->trail1 = m_player1->m_waveTrail;
 			f->head1 = f->trail1->m_currentPoint;
 			f->trail1->m_currentPoint = ccpAdd(f->head1, ccpSub(s1, f->real1));
-			f->trail1->updateStroke();
+			f->trail1->updateStroke(0.f);
 		}
 
 		// Player 2 (dual mode only)
@@ -264,7 +264,7 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 				f->trail2 = m_player2->m_waveTrail;
 				f->head2 = f->trail2->m_currentPoint;
 				f->trail2->m_currentPoint = ccpAdd(f->head2, ccpSub(s2, f->real2));
-				f->trail2->updateStroke();
+				f->trail2->updateStroke(0.f);
 			}
 		}
 
