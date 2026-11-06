@@ -133,12 +133,19 @@ namespace {
 class $modify(SmoothGameLayer, GJBaseGameLayer) {
 	struct Fields {
 		int8_t isPlayLayer = -1;
-		bool active = false;   // tracks hold usable data
-		bool applied = false;  // smoothed positions are currently set
-		double phase = 0.0;    // game seconds since the last physics step
+		bool active = false;       // tracks hold usable data
+		bool applied = false;      // smoothed positions are currently set
+		bool appliedP2 = false;    // player 2 was moved too
+		double phase = 0.0;        // game seconds since the last physics step
 
 		Track p1, p2, cam;
 		CCPoint real1, real2, realCam;
+
+		// Wave trails are separate nodes built from real positions, so they
+		// are shifted by the same offset as their player while drawing.
+		HardStreak* trail1 = nullptr;
+		HardStreak* trail2 = nullptr;
+		CCPoint trailPos1, trailPos2;
 	};
 
 	bool inPlayLayer() {
@@ -169,10 +176,17 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 			return;
 		}
 
+		// Bad frame time (first frame, alt-tab, NaN): skip smoothing for it
+		if (!std::isfinite(dt) || dt <= 0.f || dt > 0.25f) {
+			this->resetTracks();
+			return;
+		}
+
 		// Convert real time to game time (time warp triggers slow the game down)
-		double warp = m_gameState.m_timeWarp > 0.f ? m_gameState.m_timeWarp : 1.f;
+		double warp = (std::isfinite(m_gameState.m_timeWarp) && m_gameState.m_timeWarp > 0.f)
+			? m_gameState.m_timeWarp : 1.0;
 		double total = f->phase + static_cast<double>(dt) * warp;
-		int predicted = static_cast<int>(std::floor(total / kStep));
+		int predicted = static_cast<int>(std::min(std::floor(total / kStep), 64.0));
 
 		CCPoint n1 = m_player1->getPosition();
 		CCPoint n2 = m_player2 ? m_player2->getPosition() : n1;
@@ -189,10 +203,15 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 			return;
 		}
 
-		// How many physics steps happened this frame. level time is exact when
+		// How many physics steps happened this frame. Level time is exact when
 		// it moves in whole steps, otherwise fall back to our own estimate.
 		int n = std::max(1, predicted);
 		double exact = levelDelta / kStep;
+		if (exact > 64.0) {
+			// Checkpoint restore, start pos, etc: time jumped, start over
+			this->resetTracks();
+			return;
+		}
 		if (exact >= 0.95 && std::abs(exact - std::round(exact)) < 0.05) {
 			n = static_cast<int>(std::round(exact));
 		}
@@ -208,19 +227,38 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 	bool applySmoothed() {
 		auto f = m_fields.self();
 		if (!f->active || f->applied) return false;
-		if (!m_player1 || !m_objectLayer) return false;
+		if (!m_player1 || !m_objectLayer || !m_player1->getParent()) return false;
 
 		float alpha = static_cast<float>(f->phase / kStep);
 		bool extra = g_extrapolate.load();
 
+		// Player 1 + camera
+		CCPoint s1 = f->p1.sample(alpha, extra);
 		f->real1 = m_player1->getPosition();
 		f->realCam = m_objectLayer->getPosition();
-		m_player1->setPosition(f->p1.sample(alpha, extra));
+		m_player1->setPosition(s1);
 		m_objectLayer->setPosition(f->cam.sample(alpha, extra));
 
-		if (m_player2 && m_gameState.m_isDualMode) {
+		f->trail1 = m_player1->m_waveTrail;
+		if (f->trail1) {
+			f->trailPos1 = f->trail1->getPosition();
+			f->trail1->setPosition(ccpAdd(f->trailPos1, ccpSub(s1, f->real1)));
+		}
+
+		// Player 2 (dual mode only)
+		f->appliedP2 = false;
+		f->trail2 = nullptr;
+		if (m_player2 && m_gameState.m_isDualMode && m_player2->getParent()) {
+			CCPoint s2 = f->p2.sample(alpha, extra);
 			f->real2 = m_player2->getPosition();
-			m_player2->setPosition(f->p2.sample(alpha, extra));
+			m_player2->setPosition(s2);
+			f->appliedP2 = true;
+
+			f->trail2 = m_player2->m_waveTrail;
+			if (f->trail2) {
+				f->trailPos2 = f->trail2->getPosition();
+				f->trail2->setPosition(ccpAdd(f->trailPos2, ccpSub(s2, f->real2)));
+			}
 		}
 
 		f->applied = true;
@@ -232,9 +270,23 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 		if (!f->applied) return;
 		f->applied = false;
 
-		if (m_player1) m_player1->setPosition(f->real1);
+		if (m_player1) {
+			m_player1->setPosition(f->real1);
+			// only touch the trail if it is still the same object
+			if (f->trail1 && m_player1->m_waveTrail == f->trail1) {
+				f->trail1->setPosition(f->trailPos1);
+			}
+		}
 		if (m_objectLayer) m_objectLayer->setPosition(f->realCam);
-		if (m_player2 && m_gameState.m_isDualMode) m_player2->setPosition(f->real2);
+
+		if (f->appliedP2 && m_player2) {
+			m_player2->setPosition(f->real2);
+			if (f->trail2 && m_player2->m_waveTrail == f->trail2) {
+				f->trail2->setPosition(f->trailPos2);
+			}
+		}
+		f->appliedP2 = false;
+		f->trail1 = f->trail2 = nullptr;
 	}
 
 	// Smoothed positions exist only while the frame is being drawn, so game
