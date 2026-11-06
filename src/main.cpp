@@ -141,11 +141,11 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 		Track p1, p2, cam;
 		CCPoint real1, real2, realCam;
 
-		// Wave trails are separate nodes built from real positions, so they
-		// are shifted by the same offset as their player while drawing.
+		// Wave trails are separate nodes built from real positions. Only their
+		// head point is moved to the smoothed position, the rest stays put.
 		HardStreak* trail1 = nullptr;
 		HardStreak* trail2 = nullptr;
-		CCPoint trailPos1, trailPos2;
+		CCPoint head1, head2;
 	};
 
 	bool inPlayLayer() {
@@ -162,6 +162,10 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 		f->active = false;
 		f->p1.valid = f->p2.valid = f->cam.valid = false;
 		f->phase = 0.0;
+	}
+
+	static bool streakUsable(HardStreak* t) {
+		return t && t->isVisible() && t->m_pointArray && t->m_pointArray->count() > 0;
 	}
 
 	void update(float dt) {
@@ -239,10 +243,12 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 		m_player1->setPosition(s1);
 		m_objectLayer->setPosition(f->cam.sample(alpha, extra));
 
-		f->trail1 = m_player1->m_waveTrail;
-		if (f->trail1) {
-			f->trailPos1 = f->trail1->getPosition();
-			f->trail1->setPosition(ccpAdd(f->trailPos1, ccpSub(s1, f->real1)));
+		f->trail1 = nullptr;
+		if (streakUsable(m_player1->m_waveTrail)) {
+			f->trail1 = m_player1->m_waveTrail;
+			f->head1 = f->trail1->m_currentPoint;
+			f->trail1->m_currentPoint = ccpAdd(f->head1, ccpSub(s1, f->real1));
+			f->trail1->updateStroke();
 		}
 
 		// Player 2 (dual mode only)
@@ -254,10 +260,11 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 			m_player2->setPosition(s2);
 			f->appliedP2 = true;
 
-			f->trail2 = m_player2->m_waveTrail;
-			if (f->trail2) {
-				f->trailPos2 = f->trail2->getPosition();
-				f->trail2->setPosition(ccpAdd(f->trailPos2, ccpSub(s2, f->real2)));
+			if (streakUsable(m_player2->m_waveTrail)) {
+				f->trail2 = m_player2->m_waveTrail;
+				f->head2 = f->trail2->m_currentPoint;
+				f->trail2->m_currentPoint = ccpAdd(f->head2, ccpSub(s2, f->real2));
+				f->trail2->updateStroke();
 			}
 		}
 
@@ -274,7 +281,7 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 			m_player1->setPosition(f->real1);
 			// only touch the trail if it is still the same object
 			if (f->trail1 && m_player1->m_waveTrail == f->trail1) {
-				f->trail1->setPosition(f->trailPos1);
+				f->trail1->m_currentPoint = f->head1;
 			}
 		}
 		if (m_objectLayer) m_objectLayer->setPosition(f->realCam);
@@ -282,7 +289,7 @@ class $modify(SmoothGameLayer, GJBaseGameLayer) {
 		if (f->appliedP2 && m_player2) {
 			m_player2->setPosition(f->real2);
 			if (f->trail2 && m_player2->m_waveTrail == f->trail2) {
-				f->trail2->setPosition(f->trailPos2);
+				f->trail2->m_currentPoint = f->head2;
 			}
 		}
 		f->appliedP2 = false;
